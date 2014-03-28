@@ -15,10 +15,10 @@ def align_xy(pos):
     natom=len(pos) #number of atoms in the ring
     #shift coordinates so that the center is on the origin:
     center=np.average(pos,axis=0)
-    pos=pos-center
+    pos0=pos-center
     #calculate the mean plane:
-    R1=sum(pos[i,:]*np.sin(2*np.pi*i/natom) for i in xrange(natom))
-    R2=sum(pos[i,:]*np.cos(2*np.pi*i/natom) for i in xrange(natom))
+    R1=sum(pos0[i,:]*np.sin(2*np.pi*i/natom) for i in xrange(natom))
+    R2=sum(pos0[i,:]*np.cos(2*np.pi*i/natom) for i in xrange(natom))
     plane=np.cross(R1,R2) #plane is the vector normal to the plane
     plane=plane/np.linalg.norm(plane) #normalize
   #   print "normalized plane",plane
@@ -39,11 +39,11 @@ def align_xy(pos):
   #     M = trans.rotation_matrix(-theta, trans.vector_product(plane, zaxis))
       M = trans.rotation_matrix(angle, trans.vector_product(plane, zaxis))
   #     print "M",M[:3,:3]
-      pos=np.dot(pos, M[:3,:3].T)
+      pos0=np.dot(pos0, M[:3,:3].T)
   #     for i in xrange(natom):
   #       pos[i]=dot(M[:3,:3],pos[i])
   #       pos[i]=dot(M,pos[i])
-    return pos,theta,plane,center
+    return pos0,theta,plane,center
 
 
 def fitEllipse(x,y):
@@ -71,14 +71,14 @@ def fitEllipse(x,y):
 
 def fitEllipse3D(pos,align=True):
     if align==True:
-        pos,theta,plane,center=align_xy(pos)
-    x = pos[:,0]
-    y = pos[:,1]
+        pos_align,theta,plane,center=align_xy(pos)
+    x = pos_align[:,0]
+    y = pos_align[:,1]
     try:
         a = fitEllipse(x,y)
     except:
         a = np.arange(1.,7.)/np.linalg.norm(np.arange(1.,7.))
-    return a,pos,theta,plane,center
+    return a,pos_align,theta,plane,center
         #import sys
         #sys.stderr.write("ellipse calculation error")
 
@@ -110,7 +110,7 @@ def ellipse_axis_length( a ):
 class Ring(object):
     def __init__(self,indices,pos,atomtypes,unitcell=None):
         self.indices = indices
-        self.pos = np.take(pos,indices,0)
+        self.pos = np.take(pos,indices,0)    # natom-in-ring x 3
         self.atomtypes = np.take(atomtypes,indices)
         self.unitcell = unitcell
         # some extra ring properties
@@ -125,6 +125,9 @@ class Ring(object):
         self.center = center
         self.theta = theta
         self.posalign = posalign  # aligned positions, 2D
+        #print "16"
+        #print "posalign"
+        #for i in range(16): print "C %8.3f %8.3f %8.3f"%(posalign[i,0],posalign[i,1],posalign[i,2])
     def set_ellips(self):
         a = fitEllipse(self.posalign[0,:],self.posalign[1,:])
         ax1,ax2 = ellipse_axis_length(a)  # in 2D plane
