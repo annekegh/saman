@@ -150,7 +150,12 @@ class Ring(object):
         #print "ingredients",ingredients
         #for i,ingred in enumerate(ingredients):
         #    print ingred,ingred_freq[i]
- 
+    def set_dmin(self):
+        dias=zeros(4)
+        for j in xrange(4):
+            dias[j]=sqrt((i[j+4,0]-i[j,0])**2 + (i[j+4,1]-i[j,1])**2 + (i[j+4,2]-i[j,2])**2 )
+        mindia=min(dias)
+
     def are_neighbors_outside_self(self,ring1,ring2):
         #check if two rings are neighbors with at least one of their common T-atoms not part of the self ring
         are_neighbors = False
