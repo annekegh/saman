@@ -154,11 +154,15 @@ class Ring(object):
         #for i,ingred in enumerate(ingredients):
         #    print ingred,ingred_freq[i]
     def set_dmin(self):
-        dias=zeros(4)
-        for j in xrange(4):
-            dias[j]=sqrt((i[j+4,0]-i[j,0])**2 + (i[j+4,1]-i[j,1])**2 + (i[j+4,2]-i[j,2])**2 )
-        mindia=min(dias)
-
+        #calculates the minimum diagonal O-O distance
+        no_atom = len(self.indices)/2
+        o_pos1 = self.posalign[1:no_atom:2]
+        o_pos2 = self.posalign[no_atom+1::2]
+        difvecs = o_pos1 - o_pos2
+        difvecs = difvecs.T
+        self.diameters = np.sqrt(difvecs[0]**2 + difvecs[1]**2 + difvecs[2]**2)
+#         print "diameters",self.diameters
+        self.dmin = np.min(self.diameters)
     def are_neighbors_outside_self(self,ring1,ring2):
         #check if two rings are neighbors with at least one of their common T-atoms not part of the self ring
         are_neighbors = False
