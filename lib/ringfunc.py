@@ -109,23 +109,28 @@ def ellipse_axis_length( a ):
 ####################################
 
 class Ring(object):
-    def __init__(self,indices,pos,atomtypes,unitcell=None):
+    def __init__(self,indices,pos,atomtypes,unitcell=None,maxradius=6.):
         self.indices = indices
         self.pos = np.take(pos,indices,0)    # natom-in-ring x 3
         self.atomtypes = np.take(atomtypes,indices)
         self.unitcell = unitcell
         # some extra ring properties
         if unitcell is None:
-            posalign,theta,plane,center = align_xy(self.pos)
-            self.newpos = np.take(pos,indices,0)  # just a copy
+            self.newpos = np.take(pos,indices,0)  # just a copy of self.pos
         else:
-            newpos = reposition_pbc(self.pos,unitcell)
-            posalign,theta,plane,center = align_xy(newpos)
-            self.newpos = newpos
-        self.plane = plane
-        self.center = center
-        self.theta = theta
-        self.posalign = posalign  # aligned positions, 2D
+            # too large?
+            center = np.sum(self.pos,0)/float(len(self.indices))
+            dist2 = np.sum((self.pos-center)**2,1)
+            if np.sum(dist2 > maxradius**2) > 0:  # if any of the atoms is too far from center
+                self.newpos = reposition_pbc(self.pos,unitcell)  # make ring coherent
+            else:
+                self.newpos = np.take(pos,indices,0)  # just a copy of self.pos
+        posalign,theta,plane,center = align_xy(self.newpos)
+        self.posalign = posalign  # aligned positions, more or less in xy-plane
+        self.theta = theta        # angle of plane with ...
+        self.plane = plane        # normal vector on ring plane
+        self.center = center      # center of the ring
+        # print in xyz format:
         #print len(posalign)
         #print "posalign"
         #for i in range(len(posalign)): print "C %8.3f %8.3f %8.3f"%(posalign[i,0],posalign[i,1],posalign[i,2])
