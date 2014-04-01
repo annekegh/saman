@@ -3,6 +3,7 @@
 
 import numpy as np
 import transformations as trans
+from collections import deque
 
 
 ######### Functions ELLIPS #########
@@ -125,11 +126,11 @@ class Ring(object):
         self.center = center
         self.theta = theta
         self.posalign = posalign  # aligned positions, 2D
-        #print "16"
+        #print len(posalign)
         #print "posalign"
-        #for i in range(16): print "C %8.3f %8.3f %8.3f"%(posalign[i,0],posalign[i,1],posalign[i,2])
+        #for i in range(len(posalign)): print "C %8.3f %8.3f %8.3f"%(posalign[i,0],posalign[i,1],posalign[i,2])
     def set_ellips(self):
-        a = fitEllipse(self.posalign[0,:],self.posalign[1,:])
+        a = fitEllipse(self.posalign[:,0],self.posalign[:,1])
         ax1,ax2 = ellipse_axis_length(a)  # in 2D plane
         phi = ellipse_angle_of_rotation(a)  # in 2D plane
         b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
@@ -176,6 +177,7 @@ class Ring(object):
                 break
         return are_neighbors
     def compare_neighbors(self,neighbors1,neighbors2):
+        from collections import deque
         are_identical = False
         deque1=deque(neighbors1)
         deque1rev=deque(neighbors1[::-1])
@@ -455,7 +457,52 @@ class Passing(object):
         # extra
         self.transitions = np.sum(abs(signchange))
         self.netto = np.sum(signchange)
-    
+        signchange3 = []
+        c = 0
+        for i in range(len(signchange)):
+            if c == len(signchange)-1:
+                signchange3.append(0)
+                c += 1
+            elif signchange[c]==0:
+                signchange3.append(0)
+                c += 1
+            elif signchange[c]==1:
+                if signchange[c+1]==-1:
+                    signchange3.append(0)
+                    signchange3.append(0)
+                    c += 2
+                elif signchange[c+1]==0:
+                    signchange3.append(1)
+                    signchange3.append(0)
+                    c += 2
+                elif signchange[c+1]==1:
+                    signchange3.append(1) #raise ValueError
+                    c += 1
+            elif signchange[c]==-1:
+                #if signchange[c+1]==-1:
+                #    print "time",c
+                #    print "ksi(time-1,time,time+1,time+2)",ksi[c-1:c+3]
+                #    print "dist(time-1,time,time+1,time+2)",dist[c-1:c+3]
+                #    print "signchange(time-1,time,time+1,time+2)",signchange[c-1:c+3]
+                #    #print signchange[c],ksi[c]
+                #    #print signchange[c+1],ksi[c+1]
+                #    raise ValueError
+                if signchange[c+1]==1:
+                    signchange3.append(0)
+                    signchange3.append(0)
+                    c += 2
+                elif signchange[c+1]==0:
+                    signchange3.append(-1)
+                    signchange3.append(0)
+                    c += 2
+                elif signchange[c+1]==-1:
+                    signchange3.append(-1) #raise ValueError
+                    c += 1
+            if c >= len(signchange): break
+
+        signchange3 = np.array(signchange3)
+        self.transitions3 = np.sum(abs(signchange3))
+        self.netto3 = np.sum(signchange3)
 
 
 def make_tcl_ring(ring,fn_tcl,fn_config,):
