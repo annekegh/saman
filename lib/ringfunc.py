@@ -208,9 +208,10 @@ class Ring(object):
             connected_neighbors.append(ring)
             neighbors.remove(ring)
         return neighbors, connected_neighbors
-    def set_neighbors(self,rg):
+    def set_neighbors(self,rg,doprint=False):
         #self.neighbors1 and self.neighbors2 are two lists of neighboring rings at opposite sides of the self ring
-        print "self",self.indices
+        print "setting neighbors"
+        if doprint: print "self",self.indices
         neighbors = []
         t_indices = self.indices[::2]   # t_indices are consecutive T-atoms in the ring
         nt_indices = len(t_indices)
@@ -224,19 +225,21 @@ class Ring(object):
                     #r = ring.copy()
                     neighbors.append(ring)
         neighbors = list(set(neighbors)) #remove duplicate rings
-        print "neighbors",[ring.indices for ring in neighbors]
-        print "nneighbors",len(neighbors)
+        if doprint:
+            print "neighbors",[ring.indices for ring in neighbors]
+            print "nneighbors",len(neighbors)
         neighbors, self.neighbors1 = self.set_connected_neighbors(neighbors)
         neighbors, self.neighbors2 = self.set_connected_neighbors(neighbors)
         assert len(neighbors) == 0
-        print "neighbors1",[ring.indices for ring in self.neighbors1]
-        print "neighbors2",[ring.indices for ring in self.neighbors2]
         self.neighbors1_sizes = [len(ring.indices) for ring in self.neighbors1]
         self.neighbors2_sizes = [len(ring.indices) for ring in self.neighbors2]
-        print "neighbors1_sizes",self.neighbors1_sizes
-        print "neighbors2_sizes",self.neighbors2_sizes
         self.neighbors_identical = self.compare_neighbors(self.neighbors1_sizes,self.neighbors2_sizes)
-        print "neighbors_identical",self.neighbors_identical
+        if doprint:
+            print "neighbors1",[ring.indices for ring in self.neighbors1]
+            print "neighbors2",[ring.indices for ring in self.neighbors2]
+            print "neighbors1_sizes",self.neighbors1_sizes
+            print "neighbors2_sizes",self.neighbors2_sizes
+            print "neighbors_identical",self.neighbors_identical
 
 
 class RingGroup(object):
@@ -916,7 +919,7 @@ def write_summarytransitions(logfile,rg):
     print "file written...",logfile
 
 def write_averagetransitions(logfile,rg):
-    if isinstance(logfile,string):
+    if isinstance(logfile,str):
         f = file(logfile,"w+")
     else: f = logfile
     print >> f,"#ring  composition transitions netto"
@@ -925,7 +928,7 @@ def write_averagetransitions(logfile,rg):
         # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         print >> f, "ring",i,c,pas.transitions,pas.netto,pas.transitions3,pas.netto3
-    if isinstance(logfile,string):
+    if isinstance(logfile,str):
         f.close()
     print "file written...",logfile
 
@@ -958,7 +961,8 @@ def plot_Fprofiles(basename,rg,):
         print "ring",i,c,pas.transitions,pas.netto
     
     plt.subplot(2,1,1)
-    plt.title(" ".join(ingredients))
+    # assume rg.ingred is set to ingredients, not to None
+    plt.title(" ".join(rg.ingred))
     plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
     
     plt.subplot(2,1,1)
@@ -994,7 +998,8 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
         print "ring",i,c,pas.transitions,pas.netto
 
     plt.subplot(2,1,1)
-    plt.title(" ".join(ingredients))
+    # assume rg.ingred is set to ingredients, not to None
+    plt.title(" ".join(rg.ingred))
     plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
 
     plt.subplot(2,1,1)
@@ -1031,7 +1036,8 @@ def plot_Fprofiles_perringtype(fignamebase,rg,):
             print "ring",ringnb,c,pas.transitions,pas.netto
     
         plt.subplot(2,1,1)
-        plt.title(" ".join(ingredients)+" "+" ".join(str(a) for a in rg.list_comps[c]))
+        # assume rg.ingred is set to ingredients, not to None
+        plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
         #plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
 
         #plt.legend(crings)

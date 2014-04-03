@@ -99,7 +99,7 @@ print "*"*20
 from saman.ringfunc import create_summarytransitions,write_summarytransitions,write_averagetransitions
 from saman.ringfunc import plot_Fprofiles,plot_Fprofiles_perringtype,plot_Fprofiles_ringtypeidentical
 
-create_summarytransitions(datadir,rg,runs=np.arange(1,2))
+create_summarytransitions(datadir,rg,runs=np.arange(1,21))
 logfile = "%s.%s.transitions.dat" % (system,temp)
 write_summarytransitions(logfile,rg)
 
@@ -111,9 +111,9 @@ print "-"*20
 
 #################################################################################
 
-plot_Fprofiles("figs/histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
-plot_Fprofiles_perringtype("figs/histogram.perringtype1.ksi_ma.%s_%sK"%(system,temp),rg,)
-plot_Fprofiles_ringtypeidentical("figs/identical.histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
+plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
 
     
 #################################################################################
