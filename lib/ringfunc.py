@@ -889,3 +889,168 @@ def write_ksi_select(fn_ksi,dist_ma,ksi,changedsign):
             print >> f, "%d  %10.4f  %10.4f %i" %(t,dist_ma[t,at],ksi[t,at],changedsign[t,at])
     f.close()
 
+########################################
+### Functions: analyze ring passages
+########################################
+
+def create_summarytransitions(datadir,rg,runs=[1]):
+    for i in range(rg.nring):
+        for run in runs:
+            fn_ksi = "%s/ksi.%i.run%i.dat"%(datadir,i,run)
+            atoms,time,dist,ksi,signchange = read_ksi_truncated(fn_ksi)
+            shift = run*10000
+
+            pas = Passing(atoms,time,dist,ksi,signchange,shift=shift)
+            rg.list_rings[i].passing.append(pas)
+    # rg will be adapted
+
+def write_summarytransitions(logfile,rg):
+    f = file(logfile,"w+")
+    print >> f,"#ring run transitions netto"
+    for i in range(rg.nring):
+        for run in range(len(rg.list_rings[i].passing)):
+            print >> f, i, run, rg.list_rings[i].passing[run].transitions, \
+                     rg.list_rings[i].passing[run].netto, rg.list_rings[i].passing[run].transitions3,\
+                     rg.list_rings[i].passing[run].netto3
+    f.close()
+    print "file written...",logfile
+
+def write_averagetransitions(logfile,rg):
+    if isinstance(logfile,string):
+        f = file(logfile,"w+")
+    else: f = logfile
+    print >> f,"#ring  composition transitions netto"
+    for i in range(rg.nring):
+        c = rg.list_compsrings[i]
+        # plot
+        pas = passing_average(rg.list_rings[i].passing, average="oneheap")
+        print >> f, "ring",i,c,pas.transitions,pas.netto,pas.transitions3,pas.netto3
+    if isinstance(logfile,string):
+        f.close()
+    print "file written...",logfile
+
+#create_summarytransitions(datadir,rg,runs=np.arange(1,21))
+#logfile = "%s.%s.transitions.dat" % (system,temp)
+#write_summarytransitions(logfile,rg)
+#logfile = "%s.%s.transitions.average.dat" % (system,temp)
+#write_averagetransitions(logfile,rg)
+
+#################################################################################
+
+import matplotlib.pyplot as plt
+colors = ['blue','green','red','black','grey','orange','magenta']
+
+def plot_Fprofiles(basename,rg,):
+    print "-"*20
+    print "#plotting"
+    print "#ring  composition transitions netto"
+    
+    plt.figure()
+    for i in range(rg.nring):
+        c = rg.list_compsrings[i]
+        # plot
+        pas = passing_average(rg.list_rings[i].passing, average="oneheap")
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
+        plt.subplot(2,1,1)
+        plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
+        plt.subplot(2,1,2)
+        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c])
+        print "ring",i,c,pas.transitions,pas.netto
+    
+    plt.subplot(2,1,1)
+    plt.title(" ".join(ingredients))
+    plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
+    
+    plt.subplot(2,1,1)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("hist(ksi)")
+    plt.xlim(-4,4)
+    plt.subplot(2,1,2)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("F(ksi) in [kBT]")
+    plt.xlim(-4,4)
+    plt.grid()
+    plt.savefig(basename+".png")
+
+def plot_Fprofiles_ringtypeidentical(basename,rg,):
+    print "-"*20
+    print "#plotting"
+    print "#ring  composition transitions netto"
+
+    for i in range(rg.nring):
+        print "ring",i,"neighbors_identical",rg.list_rings[i].neighbors_identical
+
+    plt.figure()
+    for i in range(rg.nring):
+        c = rg.list_rings[i].neighbors_identical
+
+        # plot
+        pas = passing_average(rg.list_rings[i].passing, average="oneheap")
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
+        plt.subplot(2,1,1)
+        plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
+        plt.subplot(2,1,2)
+        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c])
+        print "ring",i,c,pas.transitions,pas.netto
+
+    plt.subplot(2,1,1)
+    plt.title(" ".join(ingredients))
+    plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
+
+    plt.subplot(2,1,1)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("hist(ksi)")
+    plt.xlim(-4,4)
+    plt.ylim(0,15000)
+    plt.grid()
+    plt.subplot(2,1,2)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("F(ksi) in [kBT]")
+    plt.xlim(-4,4)
+    plt.ylim(0,10)
+    plt.grid()
+    plt.savefig("%s.png"%(basename))
+
+def plot_Fprofiles_perringtype(fignamebase,rg,):
+    print "-"*20
+    print "#plotting"
+    print "#ring  composition transitions netto"
+
+    for c,crings in enumerate(rg.list_rings_percomp):
+        print "Doing comp",c,"for rings",crings
+
+        plt.figure()
+        for i,ringnb in enumerate(crings):
+            # plot
+            pas = passing_average(rg.list_rings[ringnb].passing, average="oneheap")
+            hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
+            plt.subplot(2,1,1)
+            plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
+            plt.subplot(2,1,2)
+            plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c])
+            print "ring",ringnb,c,pas.transitions,pas.netto
+    
+        plt.subplot(2,1,1)
+        plt.title(" ".join(ingredients)+" "+" ".join(str(a) for a in rg.list_comps[c]))
+        #plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
+
+        #plt.legend(crings)
+    
+        plt.subplot(2,1,1)
+        plt.xlabel("ksi in [A]")
+        plt.ylabel("hist(ksi)")
+        plt.xlim(-4,4)
+        plt.ylim(0,1000)
+        plt.grid()
+        plt.subplot(2,1,2)
+        plt.xlabel("ksi in [A]")
+        plt.ylabel("F(ksi) in [kBT]")
+        plt.xlim(-4,4)
+        plt.grid()
+        plt.ylim(0,10)
+        plt.savefig("%s.comp%i.png"%(fignamebase,c))
+
+#plot_Fprofiles("figs/histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
+#plot_Fprofiles_perringtype("figs/histogram.perringtype1.ksi_ma.%s_%sK"%(system,temp),rg,)
+#plot_Fprofiles_ringtypeidentical("figs/identical.histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
+
