@@ -17,7 +17,7 @@ molecule sizes from FIELD
 """
 
 import numpy as np
-from saman.readdlpolyfunc import *
+from saman.dlpolyfunc import *
 
 # for matplotlib figure generation...
 import matplotlib
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     # whose MSD is taken into account, e.g. ['C2','H1'], or ['C2'], or ...
     selected_atomtypes = args.atomtypes
     unfolded = args.unfolded
-    times = [float(t) for t in args.times]
+   # times = [float(t) for t in args.times]
 
     ######################################################################
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         # read data adsorbates
         list_allcoor,unitcell,seladsorbates = get_xyz(
                  filename_field,[list_filename_h5[n]],filename_history,combine,selected_atomtypes,)
-        t_start,t_end,t_delta,t0,t1,dt,dtc,dn1,dn2,ddn = get_times_MSD(times,filename_history)
+      #  t_start,t_end,t_delta,t0,t1,dt,dtc,dn1,dn2,ddn = get_times_MSD(times,filename_history)
 
 
         assert len(list_allcoor)==1
@@ -161,17 +161,22 @@ if __name__ == "__main__":
                 ksi[:,at] = k[:]
 
             fn_ksi = "ksi.%i.run%i.dat"%(i,run)
-            import numpy.ma as ma
-            dist_ma = ma.masked_greater(dist,5.)
+
+            # create mask
+            h = np.sqrt(dist**2-ksi**2)
+            mask = (h>0.5*abs(ksi)+3.)|(abs(ksi)>5)|(h>5.)
+            #mask = (abs(ksi)>5.)|(h>4.)
+
+
             # detect ring passage
             sign = (ksi>0)    # True if ksi>0, False if ksi<0
             signchange = np.array(sign[1:,:],int)-np.array(sign[:-1,:],int)
 
-            write_ksi_select(fn_ksi,dist_ma,ksi,signchange)
+            write_ksi_select(fn_ksi,mask,dist,ksi,signchange)
 
 
 #            def write_xyz_diffvector(filename,pos,center,unitcell):
-#                from saman.ringfunc import shortest_vector
+#                from functionschannels import shortest_vector
 #                ntime = pos.shape[0]
 #                natom = pos.shape[1]
 #

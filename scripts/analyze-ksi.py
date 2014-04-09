@@ -20,7 +20,7 @@ system = sys.argv[1]
 temp = sys.argv[2]
 datadir = sys.argv[3]
 #list_datadir = glob.glob("../data-channels/%s_%sK/%s_*ethylene_%sK/" %(system,temp,system,temp))
-list_datadir = glob.glob("%s/*/"%datadir)
+list_datadir = glob.glob("%s/"%datadir)
 print "list_datadir",list_datadir
 assert len(list_datadir) == 1
 datadir = list_datadir[0]
@@ -55,6 +55,9 @@ fn_unitcell = "%s/cellvectors" %(somedir,)
 natom,atomtypes,pos = read_coords(fn_xyz)
 list_rings_indices = read_rings(fn_rings)
 unitcell0 = read_unitcell(fn_unitcell)
+
+#### for testing!!!!!!!!!!!!1
+#list_rings_indices = list_rings_indices[:8]
 
 rg = RingGroup(list_rings_indices,pos,atomtypes,unitcell=unitcell0)
 rg.set_ellips()
@@ -121,12 +124,10 @@ plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp
       #  dist_ma = ma.masked_greater(dist,5.)
       #  ksi_ma = ma.masked_array(ksi,mask=dist_ma.mask)
       #  
-      #  #print "masked dist:",sum(dist_ma.mask)  # this is the number of "True" values = the number of masked values
-      #  #print "masked ksi:",sum(ksi_ma.mask)  # this is the number of "True" values = the number of masked values
+      #  print "masked dist:",sum(dist_ma.mask)  # this is the number of "True" values = the number of masked values
+      #  print "masked ksi:",sum(ksi_ma.mask)  # this is the number of "True" values = the number of masked values
       #  
       #  # detect ring passage
-      #  sign = (ksi>0)       # True if ksi>0, False if ksi<0
-      #  signchange = np.array(sign[1:,:],int)-np.array(sign[:-1,:],int)
       #  dksi_ma = ma.masked_array(signchange,mask=dist_ma.mask[:-1])
       #  hist,edges = np.histogram(ksi_ma[~ksi_ma.mask].ravel(),bins=50)
 
