@@ -109,7 +109,7 @@ def ellipse_axis_length( a ):
 ####################################
 
 class Ring(object):
-    def __init__(self,indices,pos,atomtypes,unitcell=None,maxradius=6.):
+    def __init__(self,indices,pos,atomtypes,unitcell=None,maxradius=6.,orient=None):
         self.indices = indices
         self.pos = np.take(pos,indices,0)    # natom-in-ring x 3
         self.atomtypes = np.take(atomtypes,indices)
@@ -130,10 +130,20 @@ class Ring(object):
         self.theta = theta        # angle of plane with ...
         self.plane = plane        # normal vector on ring plane
         self.center = center      # center of the ring
+        # adapt vector orient to largest direction or to given direction
+        if orient is None:
+            index = self.get_orient()
+        else: index = orient
+        if self.plane[index] < 0:
+            self.plane *= -1.
+        self.orient = index
         # print in xyz format:
         #print len(posalign)
         #print "posalign"
         #for i in range(len(posalign)): print "C %8.3f %8.3f %8.3f"%(posalign[i,0],posalign[i,1],posalign[i,2])
+    def get_orient(self):
+        args = np.argsort(abs(self.plane))   # the largest component
+        return args[-1]
     def set_ellips(self):
         a = fitEllipse(self.posalign[:,0],self.posalign[:,1])
         ax1,ax2 = ellipse_axis_length(a)  # in 2D plane
@@ -247,7 +257,7 @@ class RingGroup(object):
         list_rings = []
         for i,indices in enumerate(list_indices):
             #print "ring",i
-            ring = Ring(indices,pos,atomtypes,unitcell=unitcell)
+            ring = Ring(indices,pos,atomtypes,unitcell=unitcell,orient=None)
             list_rings.append(ring)
 #            # too large?
 #            center = np.sum(ring.pos,0)/len(ring.indices)
@@ -270,6 +280,7 @@ class RingGroup(object):
         self.list_pos = [ring.pos for ring in list_rings]
         self.list_atomtypes = [ring.atomtypes for ring in list_rings]
         self.nring = len(self.list_rings)
+        self.list_orient = [ring.orient for ring in list_rings]
     def set_ellips(self):
         for i in range(self.nring):
             self.list_rings[i].set_ellips()
@@ -301,11 +312,12 @@ class RingGroup(object):
 
     def analyze_composition(self,ingredients=None):
         self.ingred = ingredients
+
+        # set compositon of individual rings
         for i in range(self.nring):
             self.list_rings[i].analyze_composition(ingredients=ingredients)
-        self._analyze_composition()
 
-    def _analyze_composition(self,):
+        # analyze composition of all rings
         # assert all rings have same ingredients list
         # TODO
         # first ring
@@ -649,29 +661,29 @@ def get_centers_planes(allcoorframework,rg,atomtypes,unitcell=None):
     #print "ntime,nring,3 (centers)",centers.shape
     for t in range(ntime):
         for i in range(rg.nring):
-            ring = Ring(rg.list_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=unitcell)
+            ring = Ring(rg.list_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=unitcell,orient=rg.list_orient[i])
             centers[t,i,:] = ring.center[:]
             planes[t,i,:] = ring.plane[:]
     return centers,planes
 
 #without ring object
-def get_centers_planes_bis(allcoorframework,list_ring_indices,atomtypes,unitcell=None):
-    # create time series of center of rings 
-    # allcoorframework  --  ntime x natom x 3
-    # list_ring_indices  --  list of ring indices lists
-    # atomtypes  --  atomtypes of all frameworkatoms
-    ntime = len(allcoorframework)
-    nring = len(list_ring_indices)
-    centers = np.zeros((ntime,nring,3))
-    planes = np.zeros((ntime,nring,3))
-    #print "ntime,natom,3 (allcoorframework)",allcoorframework.shape
-    #print "ntime,nring,3 (centers)",centers.shape
-    for t in range(ntime):
-        for i in range(nring):
-            ring = Ring(list_ring_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=unitcell)
-            centers[t,i,:] = ring.center[:]
-            planes[t,i,:] = ring.plane[:]
-    return centers,planes
+#def get_centers_planes_bis(allcoorframework,list_ring_indices,atomtypes,unitcell=None):
+#    # create time series of center of rings 
+#    # allcoorframework  --  ntime x natom x 3
+#    # list_ring_indices  --  list of ring indices lists
+#    # atomtypes  --  atomtypes of all frameworkatoms
+#    ntime = len(allcoorframework)
+#    nring = len(list_ring_indices)
+#    centers = np.zeros((ntime,nring,3))
+#    planes = np.zeros((ntime,nring,3))
+#    #print "ntime,natom,3 (allcoorframework)",allcoorframework.shape
+#    #print "ntime,nring,3 (centers)",centers.shape
+#    for t in range(ntime):
+#        for i in range(nring):
+#            ring = Ring(list_ring_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=unitcell,orient=list_orient[i])
+#            centers[t,i,:] = ring.center[:]
+#            planes[t,i,:] = ring.plane[:]
+#    return centers,planes
 
 def shortest_vector(delta,unitcell):
     reciprocal = np.linalg.inv(unitcell).T
@@ -876,7 +888,7 @@ def write_ksi(fn_ksi,ksi):
         print >> f, line
     f.close()
 
-def write_ksi_select(fn_ksi,dist_ma,ksi,changedsign):
+def write_ksi_select_masked(fn_ksi,dist_ma,ksi,changedsign):
     # ksi -- nstep x at
     # assume masked
     f = file(fn_ksi, "w+")
@@ -889,7 +901,20 @@ def write_ksi_select(fn_ksi,dist_ma,ksi,changedsign):
         #c = changedsign[:,at][~dist.mask[:,at]]
         times = np.arange(nstep)[~dist_ma.mask[:,at]]
         for i,t in enumerate(times[:-1]):
-            print >> f, "%d  %10.4f  %10.4f %i" %(t,dist_ma[t,at],ksi[t,at],changedsign[t,at])
+            print >> f, "%-6d  %10.4f  %10.4f %i" %(t,dist_ma[t,at],ksi[t,at],changedsign[t,at])
+    f.close()
+
+def write_ksi_select(fn_ksi,mask,dist,ksi,changedsign):
+    # dist,ksi,mask -- arrays of size nstep x at
+    # mask  --  array that gives True if the element should be masked (left out) 
+    f = file(fn_ksi, "w+")
+
+    nstep,natom = ksi.shape
+    for at in range(natom):
+        print >> f, "#at",at
+        times = np.arange(nstep)[~mask[:,at]]   # gather the non-masked elements
+        for i,t in enumerate(times[:-1]):
+            print >> f, "%-6d  %10.4f  %10.4f %i" %(t,dist[t,at],ksi[t,at],changedsign[t,at])
     f.close()
 
 ########################################
@@ -909,12 +934,14 @@ def create_summarytransitions(datadir,rg,runs=[1]):
 
 def write_summarytransitions(logfile,rg):
     f = file(logfile,"w+")
-    print >> f,"#ring run transitions netto"
+    print >> f,"#ring run composition   transitions netto   transitions-corr netto-corr"
     for i in range(rg.nring):
+        c = rg.list_compsrings[i]
         for run in range(len(rg.list_rings[i].passing)):
-            print >> f, i, run, rg.list_rings[i].passing[run].transitions, \
+            print >> f, "%-3i %3i %3i   %6d %6d   %6d %6d" %(
+                     i, c, run, rg.list_rings[i].passing[run].transitions, \
                      rg.list_rings[i].passing[run].netto, rg.list_rings[i].passing[run].transitions3,\
-                     rg.list_rings[i].passing[run].netto3
+                     rg.list_rings[i].passing[run].netto3 )
     f.close()
     print "file written...",logfile
 
@@ -922,12 +949,12 @@ def write_averagetransitions(logfile,rg):
     if isinstance(logfile,str):
         f = file(logfile,"w+")
     else: f = logfile
-    print >> f,"#ring  composition transitions netto"
+    print >> f,"#ring composition   transitions netto   transitions-corr netto-corr"
     for i in range(rg.nring):
         c = rg.list_compsrings[i]
-        # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
-        print >> f, "ring",i,c,pas.transitions,pas.netto,pas.transitions3,pas.netto3
+        print >> f,"%-3i %3i   %6d %6d   %6d %6d" %(
+                 i,c,pas.transitions,pas.netto,pas.transitions3,pas.netto3 )
     if isinstance(logfile,str):
         f.close()
     print "file written...",logfile
@@ -951,28 +978,30 @@ def plot_Fprofiles(basename,rg,):
     plt.figure()
     for i in range(rg.nring):
         c = rg.list_compsrings[i]
+        label = " ".join(str(a) for a in rg.list_comps[c]) if i==rg.list_rings_percomp[c][0]  else ""
         # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
         plt.subplot(2,1,1)
-        plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
+        plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c],label=label)
         plt.subplot(2,1,2)
-        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c])
+        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c],)
         print "ring",i,c,pas.transitions,pas.netto
     
     plt.subplot(2,1,1)
     # assume rg.ingred is set to ingredients, not to None
     plt.title(" ".join(rg.ingred))
-    plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
+    plt.legend()
+    #plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
     
     plt.subplot(2,1,1)
-    plt.xlabel("ksi in [A]")
     plt.ylabel("hist(ksi)")
     plt.xlim(-4,4)
     plt.subplot(2,1,2)
     plt.xlabel("ksi in [A]")
     plt.ylabel("F(ksi) in [kBT]")
     plt.xlim(-4,4)
+    plt.ylim(0,10)
     plt.grid()
     plt.savefig(basename+".png")
 
@@ -987,7 +1016,6 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
     plt.figure()
     for i in range(rg.nring):
         c = rg.list_rings[i].neighbors_identical
-
         # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
@@ -998,12 +1026,9 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
         print "ring",i,c,pas.transitions,pas.netto
 
     plt.subplot(2,1,1)
-    # assume rg.ingred is set to ingredients, not to None
-    plt.title(" ".join(rg.ingred))
-    plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
+    plt.title("neighbors_identical: False(blue) / True(green)")
 
     plt.subplot(2,1,1)
-    plt.xlabel("ksi in [A]")
     plt.ylabel("hist(ksi)")
     plt.xlim(-4,4)
     plt.ylim(0,15000)
@@ -1038,12 +1063,8 @@ def plot_Fprofiles_perringtype(fignamebase,rg,):
         plt.subplot(2,1,1)
         # assume rg.ingred is set to ingredients, not to None
         plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
-        #plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
-
-        #plt.legend(crings)
     
         plt.subplot(2,1,1)
-        plt.xlabel("ksi in [A]")
         plt.ylabel("hist(ksi)")
         plt.xlim(-4,4)
         plt.ylim(0,1000)
@@ -1052,11 +1073,37 @@ def plot_Fprofiles_perringtype(fignamebase,rg,):
         plt.xlabel("ksi in [A]")
         plt.ylabel("F(ksi) in [kBT]")
         plt.xlim(-4,4)
-        plt.grid()
         plt.ylim(0,10)
+        plt.grid()
         plt.savefig("%s.comp%i.png"%(fignamebase,c))
 
-#plot_Fprofiles("figs/histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
-#plot_Fprofiles_perringtype("figs/histogram.perringtype1.ksi_ma.%s_%sK"%(system,temp),rg,)
-#plot_Fprofiles_ringtypeidentical("figs/identical.histogram.ksi_ma.%s_%sK"%(system,temp),rg,)
+
+def write_Fprofiles(basename,rg,):
+    print "-"*20
+    print "writing Fprofiles"
+
+    f = file(basename+".max.dat","w+")
+    print >> f, "#ring Fmax"
+    for i in range(rg.nring):
+        pas = passing_average(rg.list_rings[i].passing, average="oneheap")
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
+        fun = -np.log(hist)-min(-np.log(hist))
+        filename = basename+".ring.%i.dat" %(i)
+        write_histogram(filename,fun,edges)
+        print >> f, i,max(fun)
+        print i,max(fun)
+    print "file written...",basename+".max.dat"
+    f.close()
+
+def write_histogram(filename,fun,edges):
+    assert len(fun)+1==len(edges)
+    middle = (edges[:-1]+edges[1:])/2.
+    nbin = len(middle)
+    f = file(filename,"w+")
+    print >> f, "#bin fun edge-left edge-right middle"
+    for i in range(nbin):
+        print >> f, "%-4i %f %f %f %f" %(i,fun[i],edges[i],edges[i+1],middle[i],)
+    print "file written...",filename
+    f.close()
+
 
