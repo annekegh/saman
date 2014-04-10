@@ -57,7 +57,7 @@ list_rings_indices = read_rings(fn_rings)
 unitcell0 = read_unitcell(fn_unitcell)
 
 #### for testing!!!!!!!!!!!!1
-#list_rings_indices = list_rings_indices[:8]
+#list_rings_indices = list_rings_indices[:2]
 
 rg = RingGroup(list_rings_indices,pos,atomtypes,unitcell=unitcell0)
 rg.set_ellips()
@@ -101,6 +101,7 @@ print "*"*20
 #################################################################################
 from saman.ringfunc import create_summarytransitions,write_summarytransitions,write_averagetransitions
 from saman.ringfunc import plot_Fprofiles,plot_Fprofiles_perringtype,plot_Fprofiles_ringtypeidentical
+from saman.ringfunc import write_Fprofiles
 
 create_summarytransitions(datadir,rg,runs=np.arange(1,21))
 logfile = "%s.%s.transitions.dat" % (system,temp)
@@ -114,9 +115,10 @@ print "-"*20
 
 #################################################################################
 
-plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
-plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
-plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+#plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+#plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
+#plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
 
     
 #################################################################################
