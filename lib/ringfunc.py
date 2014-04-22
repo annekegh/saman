@@ -1106,4 +1106,18 @@ def write_histogram(filename,fun,edges):
     print "file written...",filename
     f.close()
 
+def write_xyz(filename,positions,atomtypes,labels=None):
+    natom = len(positions)
+    assert natom==len(atomtypes)
+    f = file(filename,"w+")
+    print >> f, natom
+    print >> f,"title"
+    for i in range(natom):
+      if labels is None:
+        print >> f, atomtypes[i], " ".join(str(val) for val in positions[i,:]) 
+      else:
+        print >> f, atomtypes[i], " ".join(str(val) for val in positions[i,:]), labels[i]
+    f.close()
+    print "file written...",filename
+
 
