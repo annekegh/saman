@@ -4,7 +4,45 @@
 import numpy as np
 import transformations as trans
 from collections import deque
+from math import atan2
 
+
+def ringpucker(a1,align=False):
+    #see: A General Definition of Ring Puckering Coordinates, Kremer and Pople, JACS 1975
+    #a1 is a vector of atom coordinates
+    natom=len(a1) #number of atoms in the ring
+    assert natom >= 4
+    #fit coordinates to xy-plane with geometric center on the origin
+    if align == True:
+        a1,theta=align_xy(a1)
+    #select the z-component of the aligned coordinates:
+    z=a1[:,2]
+    if natom%2==1:
+        nm=(natom-1)/2 #number of possible m values
+        q_phi=np.zeros([nm,2])
+    else:
+        nm=natom/2
+        q_phi=np.zeros([nm+1,2])
+    q_cos_phi=np.zeros(nm)
+    q_sin_phi=np.zeros(nm)
+    norm=np.sqrt(2.0/natom)
+    for m in np.arange(2,nm):
+        for j in np.arange(natom):
+            q_cos_phi[m]=q_cos_phi[m]+z[j]*np.cos(2*np.pi*m*j/natom)
+            q_sin_phi[m]=q_sin_phi[m]+z[j]*np.sin(2*np.pi*m*j/natom)
+        q_cos_phi[m]=q_cos_phi[m]*norm #normalization
+        q_sin_phi[m]=q_sin_phi[m]*(-1)*norm #normalization
+        q_phi[m,1]=atan2(q_sin_phi[m],q_cos_phi[m])
+        q_phi[m,0]=q_cos_phi[m]/np.cos(q_phi[m,1])
+    if natom%2==0:
+        m=natom/2
+        qn2=0
+        for j in np.arange(natom):
+            qn2=qn2+(-1)**j*z[j]
+        qn2=qn2*norm/2
+        q_phi[m,0]=qn2
+    q_phi[0,0]=sum(z*z) #total puckering amplitude
+    return q_phi
 
 ######### Functions ELLIPS #########
 
@@ -250,6 +288,8 @@ class Ring(object):
             print "neighbors1_sizes",self.neighbors1_sizes
             print "neighbors2_sizes",self.neighbors2_sizes
             print "neighbors_identical",self.neighbors_identical
+    def set_ringpucker(self):
+        self.q_phi = ringpucker(self.posalign)
 
 
 class RingGroup(object):
