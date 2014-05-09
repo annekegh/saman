@@ -92,14 +92,19 @@ def read_unitcell_from_h5(filename_h5):
 
     return unitcell  # in angstrom
 
-def read_trajectory_from_list_h5(list_filename_h5,adsorbates,combine):
+def read_trajectory_from_list_h5(list_filename_h5,selected,combine):
+    """
+    arguments::
+      selected -- list of molecules, each molecule is a list of atom indices,
+                  OR None (all are selected) TODO
+    """
     assert combine in ["permolecule","perfile","cumul"]
     #list_x = []
     #list_y = []
     #list_z = []
     list_allcoor = []
     for n,filename_h5 in enumerate(list_filename_h5):
-        allcoor = read_trajectory_from_h5(filename_h5,adsorbates)
+        allcoor = read_trajectory_from_h5(filename_h5,selected)
         if combine == "perfile":
             #list_x.append(x)
             #list_y.append(y)
@@ -121,7 +126,13 @@ def read_trajectory_from_list_h5(list_filename_h5,adsorbates,combine):
 
 def read_trajectory_from_h5(filename_h5,adsorbates):
     """Read data h5py file
-    trajectory data in angstrom"""
+
+    trajectory data in angstrom
+
+    arguments::
+      adsorbates -- list of molecules, each molecule is a list of atom indices,
+                  OR None (all are selected) TODO
+    """
     # read h5py file
     f = h5.File(filename_h5, mode='r')
     #print f['trajectory'].keys()  # cell, pos, ...
@@ -312,19 +323,32 @@ def get_selframework(filename_field,filename_history,selected_atomtypes,):
     return selframework  #list of atom indices
 
 def get_xyz(filename_field,list_filename_h5,filename_history,combine,selected_atomtypes,atoms="adsorbates"):
+    """
+    arguments::
+      selected_atomtypes -- list of atomtypes, e.g. ['C2','H2']
+      atoms -- string to decide whether to select framework atoms or adsorbate atoms
+
+    returns::
+      list_allcoor -- list of ntime x natom x 3 arrays, one array per run or per molecule
+      unitcell -- ntime x 3 x 3
+      selected -- list of molecules, each molecule is a list of atom indices,
+                  OR None (all are selected) TODO
+    """
 
     # which atoms to take
     if atoms == "adsorbates":
         selected = get_seladsorbates(filename_field,filename_history,selected_atomtypes,)
     elif atoms == "framework":
         selected = [get_selframework(filename_field,filename_history,selected_atomtypes,)]
+    else:
+        selected = None
     # unit cell ntime x 3 x 3 (in molmod format: cell vectors in columns)
     unitcell = read_unitcell_from_h5(list_filename_h5[0])
     print "unitcell",unitcell[0,:,:]
     # trajectory
-    allcoor = read_trajectory_from_list_h5(list_filename_h5,selected,combine)
+    list_allcoor = read_trajectory_from_list_h5(list_filename_h5,selected,combine)
 
-    return allcoor,unitcell,selected 
+    return list_allcoor,unitcell,selected 
 
 
 ######################################################################
