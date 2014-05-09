@@ -107,6 +107,23 @@ create_summarytransitions(datadir,rg,runs=np.arange(1,21))
 logfile = "%s.%s.transitions.dat" % (system,temp)
 write_summarytransitions(logfile,rg)
 
+print "*"*20
+print "doing number of times near ring"
+logfile = "%s.%s.teatime.dat" % (system,temp)
+f = file(logfile,"w+")
+print >> f,"#ring number-of-times-near-ring"
+for i,ring in enumerate(rg.list_rings):
+    total = np.sum([len(pas.ksi) for pas in rg.list_rings[i].passing])
+    left = np.sum([np.sum(pas.ksi>0) for pas in rg.list_rings[i].passing])
+    right = np.sum([np.sum(pas.ksi<0) for pas in rg.list_rings[i].passing])
+    print i,total,left,right,total-right-left
+    print >> f, i,total,left,right
+f.close()
+print "file written...",logfile
+print "*"*20
+
+print done
+
 logfile = "%s.%s.transitions.average.dat" % (system,temp)
 write_averagetransitions(logfile,rg)
 print "-"*20
@@ -115,9 +132,9 @@ print "-"*20
 
 #################################################################################
 
-#plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
-#plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
-#plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
 write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
 
     

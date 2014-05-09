@@ -964,6 +964,7 @@ def write_ksi_select(fn_ksi,mask,dist,ksi,changedsign):
 def create_summarytransitions(datadir,rg,runs=[1]):
     for i in range(rg.nring):
         for run in runs:
+            # add one Passing instance for each run (to each of the rings)
             fn_ksi = "%s/ksi.%i.run%i.dat"%(datadir,i,run)
             atoms,time,dist,ksi,signchange = read_ksi_truncated(fn_ksi)
             shift = run*10000
