@@ -97,31 +97,25 @@ def read_trajectory_from_list_h5(list_filename_h5,selected,combine):
     arguments::
       selected -- list of molecules, each molecule is a list of atom indices,
                   OR None (all are selected) TODO
+
+    returns::
+      list_allcoor -- list of coordinates, organized perfile or permolecule
+                      1) perfile: one array ntimexnatomx3 per trajectory file
+                      2) permolecule: one array ntimex1x3 per molecule and trajectory file
     """
     assert combine in ["permolecule","perfile","cumul"]
-    #list_x = []
-    #list_y = []
-    #list_z = []
     list_allcoor = []
     for n,filename_h5 in enumerate(list_filename_h5):
-        allcoor = read_trajectory_from_h5(filename_h5,selected)
+        allcoor = read_trajectory_from_h5(filename_h5,selected)  #ntime x natom x 3
         if combine == "perfile":
-            #list_x.append(x)
-            #list_y.append(y)
-            #list_z.append(z)
             list_allcoor.append(allcoor)
         elif combine == "permolecule":
-            for at in range(x.shape[1]):  #natom
-                #list_x.append(np.reshape(x[:,at],(-1,1)))
-                #list_y.append(np.reshape(y[:,at],(-1,1)))
-                #list_z.append(np.reshape(z[:,at],(-1,1)))
-                #ist_allcoor.append(np.reshape(allcoor[:,at,:],(-1,3)))
-                list_allcoor.append(allcoor[:,at,:])
+            for at in range(allcoor.shape[1]):  #natom
+                list_allcoor.append(np.reshape(allcoor[:,at,:],(-1,1,3)))
         elif combine == "cumul":
             raise ValueError("not implemented!")
     print "list_allcoor:",len(list_allcoor)
     print "Closing h5 file...",filename_h5
-    #return list_x,list_y,list_z
     return list_allcoor
 
 def read_trajectory_from_h5(filename_h5,adsorbates):
@@ -132,6 +126,9 @@ def read_trajectory_from_h5(filename_h5,adsorbates):
     arguments::
       adsorbates -- list of molecules, each molecule is a list of atom indices,
                   OR None (all are selected) TODO
+
+    returns::
+      allcoor -- ntime x natom x 3
     """
     # read h5py file
     f = h5.File(filename_h5, mode='r')
