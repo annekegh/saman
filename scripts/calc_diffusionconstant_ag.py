@@ -202,5 +202,7 @@ if __name__ == "__main__":
                  dn1,outdir,dtc,dn2=dn2,ddn=ddn,)
         else:
             # this will first unfold the trajectory based on the unitcells
-            analyze_matrixdist(list_x,list_y,list_z,dn1,outdir,dtc,dn2=dn2,ddn=ddn,unitcell=unitcell)
+            analyze_matrixdist([arr[:,:,0] for arr in list_allcoor],
+                 [arr[:,:,1] for arr in list_allcoor],[arr[:,:,2] for arr in list_allcoor],
+                 dn1,outdir,dtc,dn2=dn2,ddn=ddn,unitcell=unitcell) 
     
