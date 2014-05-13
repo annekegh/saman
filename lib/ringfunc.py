@@ -5,6 +5,7 @@ import numpy as np
 import transformations as trans
 from collections import deque
 from math import atan2
+from ring_sasa import ring_sasa
 
 
 def ringpucker(a1,align=False):
@@ -290,6 +291,12 @@ class Ring(object):
             print "neighbors_identical",self.neighbors_identical
     def set_ringpucker(self):
         self.q_phi = ringpucker(self.posalign)
+    def set_radii(self,radii):
+        self.radii = radii
+    def set_sasa(self,solventradius):
+        #calculate the solvent accessible surface area of the window,
+        #based on the projected 2D surface of the oxygen ring atoms
+        self.sasapolygon,self.sasa = ring_sasa(self.posalign[1::2,:2],self.radii[1::2],solventradius)
 
 
 class RingGroup(object):
