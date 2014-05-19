@@ -291,12 +291,13 @@ class Ring(object):
             print "neighbors_identical",self.neighbors_identical
     def set_ringpucker(self):
         self.q_phi = ringpucker(self.posalign)
-    def set_radii(self,radii):
-        self.radii = radii
-    def set_sasa(self,solventradius):
-        #calculate the solvent accessible surface area of the window,
-        #based on the projected 2D surface of the oxygen ring atoms
-        self.sasapolygon,self.sasa = ring_sasa(self.posalign[1::2,:2],self.radii[1::2],solventradius)
+    def set_radii(self, dictradii):
+        #dictradii is a dictionary, for example: {'Si': 2.95, 'Al': 2.86, 'P': 2.97, 'O2': 2.66, 'O1': 2.81}
+        self.radii = np.array([dictradii[i] for i in self.atomtypes])
+    def set_sasa(self, solventradius):
+        #calculate the solvent accessible area of the ring window,
+        #based on the projected 2D surface of the ring atoms
+        self.sasapolygon,self.sasa = ring_sasa(self.posalign[:,:2], self.radii, solventradius)
 
 
 class RingGroup(object):

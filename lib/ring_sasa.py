@@ -76,9 +76,9 @@ def ring_sasa(a,radii,solventradius):
     natom = len(a)
     sasaradii = radii + solventradius
 
-    #step1: check if any diagonal atom pair distance is shorter than the sum of their sasaradii
+    #step1:
+    #check if any diagonal atom pair distance is shorter than the sum of their sasaradii
     #in that case, the area is zero
-#     print "step 1"
     diameters2 = np.sum((a[:natom/2] - a[natom/2:])**2,axis=1)
     sasasum2 = (sasaradii[:natom/2] + sasaradii[natom/2:])**2
     sasadiameters2 = diameters2 - sasasum2
@@ -86,25 +86,25 @@ def ring_sasa(a,radii,solventradius):
         return np.array([]),0.0
 
 
-    #step 2:check if next-neighbor intersections overlap with the 1 atom in between
+    #step 2:
+    #check if next-neighbor intersections overlap with the 1 atom in between
     #if that is not the case remove that 1 atom
-    #do this step twice
-#     print "step 2"
-    a,sasaradii,natom = remove_between_next_neighbors(a,sasaradii,natom)
-#     print "natom",natom
-    a,sasaradii,natom = remove_between_next_neighbors(a,sasaradii,natom)
-#     print "natom",natom
-    if natom < 3:
-        return np.array([]),0.0
+    #do this step until there is no change or until there are less than three atoms left
+    delta = 1
+    while delta > 0:
+        a,sasaradii,newatom = remove_between_next_neighbors(a,sasaradii,natom)
+        delta = natom - newatom
+        natom = newatom
+        print "natom",natom
+        if natom < 3:
+            return np.array([]),0.0
 
-    #step 3: for each pair of (remaining) neighbor rings calculate the intersection point closest to the ring center
-#     print "step 3"
+    #step 3:
+    #for each pair of (remaining) neighbor rings calculate the intersection point closest to the ring center
     intersect = get_intersect(a,sasaradii,natom,1)
     newintersect = select_shortest(intersect)
-#     print "newintersect",newintersect
 
     #step 4:calculate the sasa area of the polygon formed by the intersection points as vertices
-#     print "step 4"
     area = area_polygon(newintersect)
 
     return newintersect, area
@@ -112,14 +112,19 @@ def ring_sasa(a,radii,solventradius):
 if __name__ == "__main__":
     from yaff import *
     import sys
-    from saman.ringfunc import write_xyz
+    from saman.ringfunc import write_xyz, read_coords
     import time
+    import os
+
     coord=sys.argv[1]
-    sys1=System.from_file(coord)
-    a1=sys1.pos/angstrom
-    natom = len(a1)
-    radii = np.array([1.4]*natom)
-    solventradius = 1.5
+    base = os.path.splitext(coord)[0]
+    natom,atomtypes,pos = read_coords(coord)
+    vdwdistances = { 'Si': 2.95, 'Al': 2.86, 'P': 2.97, 'O2': 2.66, 'O1': 2.81}
+    print vdwdistances
+    print atomtypes
+    radii = np.array([vdwdistances[i] for i in atomtypes])
+    print radii
+    solventradius = 0.
 
     start = time.clock()
     points,area = ring_sasa(a1[:,0:2],radii,solventradius)
@@ -129,11 +134,11 @@ if __name__ == "__main__":
     if npoint == 0:
         print "no points, exiting."
         sys.exit()
-    atomtypes = np.array([12]*npoint)
+    pointtypes = np.array([12]*npoint)
     zeros = np.zeros(npoint).reshape(npoint,1)
     points3D = np.append(points,zeros,axis=1)
     print "points3D",points3D
     print "area",area
     print "time",end-start
-    write_xyz(coord + "points.xyz",points3D,atomtypes)
+    write_xyz(base + "points.xyz",points3D,pointtypes)
 
