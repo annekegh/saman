@@ -1024,35 +1024,57 @@ def plot_Fprofiles(basename,rg,):
     print "#plotting"
     print "#ring  composition transitions netto"
     
-    plt.figure()
+    plt.figure(1)
+    plt.figure(2)
     for i in range(rg.nring):
         c = rg.list_compsrings[i]
         label = " ".join(str(a) for a in rg.list_comps[c]) if i==rg.list_rings_percomp[c][0]  else ""
-        # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
-        plt.subplot(2,1,1)
+        # plot
+        plt.figure(1)
+        plt.subplot(3,1,1)
         plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c],label=label)
-        plt.subplot(2,1,2)
+        plt.subplot(3,1,2)
+        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c],)
+        plt.subplot(3,1,3)
+        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist),color=colors[c],)
+        plt.figure(2)
         plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c],)
         print "ring",i,c,pas.transitions,pas.netto
-    
-    plt.subplot(2,1,1)
+
+    plt.figure(1)
+    plt.subplot(3,1,1)
     # assume rg.ingred is set to ingredients, not to None
     plt.title(" ".join(rg.ingred))
     plt.legend()
     #plt.legend([" ".join(str(a) for a in comp) for comp in rg.list_comps])
     
-    plt.subplot(2,1,1)
+    plt.subplot(3,1,1)
     plt.ylabel("hist(ksi)")
     plt.xlim(-4,4)
-    plt.subplot(2,1,2)
-    plt.xlabel("ksi in [A]")
+    plt.subplot(3,1,2)
     plt.ylabel("F(ksi) in [kBT]")
     plt.xlim(-4,4)
     plt.ylim(0,10)
     plt.grid()
+    plt.subplot(3,1,3)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("F(ksi) in [kBT]")
+    plt.xlim(-4,4)
+    plt.grid()
+
     plt.savefig(basename+".png")
+
+    plt.figure(2)
+    plt.title(" ".join(rg.ingred))
+    plt.legend()
+    plt.grid()
+    plt.xlim(-4,4)
+    plt.xlabel("ksi in [A]")
+    plt.ylabel("F(ksi) in [kBT]")
+
+    plt.savefig(basename+".noshift.png")
 
 def plot_Fprofiles_ringtypeidentical(basename,rg,):
     print "-"*20
@@ -1067,7 +1089,7 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
         c = rg.list_rings[i].neighbors_identical
         # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
-        hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
         plt.subplot(2,1,1)
         plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
         plt.subplot(2,1,2)
@@ -1127,7 +1149,7 @@ def plot_Fprofiles_perringtype(fignamebase,rg,):
         plt.savefig("%s.comp%i.png"%(fignamebase,c))
 
 
-def write_Fprofiles(basename,rg,):
+def write_Fprofiles(basename,rg,shift=False):
     print "-"*20
     print "writing Fprofiles"
 
@@ -1136,7 +1158,10 @@ def write_Fprofiles(basename,rg,):
     for i in range(rg.nring):
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
-        fun = -np.log(hist)-min(-np.log(hist))
+        if shift:
+            fun = -np.log(hist)-min(-np.log(hist))
+        else:
+            fun = -np.log(hist)
         filename = basename+".ring.%i.dat" %(i)
         write_histogram(filename,fun,edges)
         print >> f, i,max(fun)

@@ -58,6 +58,9 @@ if __name__ == "__main__":
     parser.add_argument('--rings',dest='ringdir',
                         default='./',
                         help='location of files that contain ring definitions')
+    parser.add_argument('--todo',dest='todo',
+                        default=None,
+                        help='what action to take: 1) ksi 2) dmin 3) None (nothing)')
     
     args = parser.parse_args()
     print "parsed"
@@ -77,7 +80,14 @@ if __name__ == "__main__":
     unfolded = args.unfolded
    # times = [float(t) for t in args.times]
 
+    todo = args.todo
+    if todo not in ["ksi","dmin",None]: raise
+    if todo is None:
+        print "Not doing anything, stopping here (set todo to ksi or dmin to obtain results)"
+        raise
+
     ######################################################################
+
 
     ##############
     # CALCULATE
@@ -88,12 +98,10 @@ if __name__ == "__main__":
     print "*"*20
     # STRUCTURE
     from saman.ringfunc import read_coords,read_rings,read_unitcell
-    from saman.ringfunc import RingGroup
+    from saman.ringfunc import RingGroup, Ring
     from saman.ringfunc import check_location_bis, get_centers_planes, write_ksi_select
 
     # create ring using config.xyz
-    #fn_xyz = "/user/home/gent/vsc400/vsc40051/mydata/germansastre/channels/ringdefinitions/sapo34/config.xyz"
-    #fn_rings = "/user/home/gent/vsc400/vsc40051/mydata/germansastre/channels/ringdefinitions/sapo34/ringatoms"
     fn_xyz = "%s/config.xyz"%args.ringdir
     fn_rings = "%s/ringatoms"%args.ringdir
     fn_unitcell = "%s/cellvectors"%args.ringdir
@@ -101,6 +109,9 @@ if __name__ == "__main__":
     list_rings_indices = read_rings(fn_rings)
     unitcell0 = read_unitcell(fn_unitcell)
     print "unitcell0",unitcell0
+    from molmod import UnitCell
+    print "volume:",UnitCell(unitcell0).volume
+    print "par a,b,c,alpha,beta,gamma:",UnitCell(unitcell0).parameters
 
     ####### !!!! while testing
     ####list_rings_indices = list_rings_indices[:2]
@@ -109,10 +120,11 @@ if __name__ == "__main__":
     rg = RingGroup(list_rings_indices,pos,atomtypes,unitcell=unitcell0)
     #rg.set_ellips()
 
+    # do file one per one,
+    # rename list_allcoor... to just allcoor
     nfile = len(list_filename_h5)
     print "nfile",nfile
     for n in range(nfile):
-        # do file one per one
         # extract run number:  format name h5 is xxx.traj9.h5 or xxx.unfold-traj9.h5
         print "doing file",n,list_filename_h5[n]
         i = list_filename_h5[n].find("traj")    # start of word "traj"
@@ -126,53 +138,87 @@ if __name__ == "__main__":
                  filename_field,[list_filename_h5[n]],filename_history,combine,selected_atomtypes_framework,
                  atoms='framework')
 
-        # read data adsorbates
-        list_allcoor,unitcell,seladsorbates = get_xyz(
-                 filename_field,[list_filename_h5[n]],filename_history,combine,selected_atomtypes,)
-      #  t_start,t_end,t_delta,t0,t1,dt,dtc,dn1,dn2,ddn = get_times_MSD(times,filename_history)
-
-
-        assert len(list_allcoor)==1
+        # assume just one h5 file here - this will break if I use combine=permolecule TODO
         assert len(list_allcoorframework)==1
-        print "list_allcoorframework[0]",list_allcoorframework[0].shape
-        print "list_allcoor[0]",list_allcoor[0].shape
+        allcoorframework = list_allcoorframework[0]
+        print "allcoorframework",allcoorframework.shape
 
-
-        select = np.arange(0,2*len(seladsorbates),2)  # just take one atom of both
-        nsel = len(select)
-        print "nsel",nsel
-
-        print "*"*20
-        print "Start ring analysis"
-        print "*"*20
-
-        ntime = len(list_allcoor[0])
+        ntime = len(allcoorframework)
         print "ntime",ntime
-        centers,planes = get_centers_planes(list_allcoorframework[0],rg,atomtypes,unitcell=unitcell0)
-        #print "centers,planes",centers.shape,planes.shape  #ntime x 3
-        for i,ring in enumerate(rg.list_rings):
-            print "---doing ring%i"%i
-            pos = np.take(list_allcoor[0],select,1)  # ntime x natom x 3
-            dist = np.zeros((ntime,nsel),float)
-            ksi = np.zeros((ntime,nsel),float)
-            for at in range(nsel):
-                d,k = check_location_bis(centers[:,i,:],planes[:,i,:],pos[:,at,:],unitcell[0,:,:])   #unitcell of first time step
-                dist[:,at] = d[:]
-                ksi[:,at] = k[:]
-
-            fn_ksi = "ksi.%i.run%i.dat"%(i,run)
-
-            # create mask
-            h = np.sqrt(dist**2-ksi**2)
-            mask = (h>0.5*abs(ksi)+3.)|(abs(ksi)>5)|(h>5.)
-            #mask = (abs(ksi)>5.)|(h>4.)
 
 
-            # detect ring passage
-            sign = (ksi>0)    # True if ksi>0, False if ksi<0
-            signchange = np.array(sign[1:,:],int)-np.array(sign[:-1,:],int)
+        # CONSTRUCT KSI
+        if todo=="ksi":
 
-            write_ksi_select(fn_ksi,mask,dist,ksi,signchange)
+            print "*"*20
+            print "Start ring analysis"
+            print "*"*20
+
+            # read data adsorbates
+            list_allcoor,unitcell,seladsorbates = get_xyz(
+                 filename_field,[list_filename_h5[n]],filename_history,combine,selected_atomtypes,)
+            assert len(list_allcoor)==1
+            allcoor = list_allcoor[0]
+            print "allcoor",allcoor.shape
+
+            # reposition adsorbate coordinates, such that the center of mass of the adsorbate is correctly computed
+            from saman.ringfunc import reposition_pbc
+            nads = len(seladsorbates)
+            pos = np.zeros((ntime,nads,3),float)   # COM of adsorbates, ntime x nads x 3
+            i = 0
+            for a in range(nads):
+                size = len(seladsorbates[a])
+                for t in range(ntime):
+                    newpos = reposition_pbc(allcoor[t,i:i+size,:],unitcell0)  # size x 3
+                    pos[t,a,:] = np.mean(newpos,0)
+                i+=size
+
+            centers,planes = get_centers_planes(allcoorframework,rg,atomtypes,unitcell=unitcell0)
+            #print "centers,planes",centers.shape,planes.shape  #ntime x 3
+            for i,ring in enumerate(rg.list_rings):
+                print "---doing ring%i"%i
+
+                dist = np.zeros((ntime,nads),float)
+                ksi = np.zeros((ntime,nads),float)
+                for a in range(nads):
+                    d,k = check_location_bis(centers[:,i,:],planes[:,i,:],pos[:,a,:],unitcell[0,:,:])   #unitcell of first time step
+                    dist[:,a] = d[:]
+                    ksi[:,a] = k[:]
+
+                fn_ksi = "ksi.%i.run%i.dat"%(i,run)
+
+                # create mask
+                h = np.sqrt(dist**2-ksi**2)
+                mask = (h>0.5*abs(ksi)+3.)|(abs(ksi)>5)|(h>5.)
+                #mask = (abs(ksi)>5.)|(h>4.)
+
+
+                # detect ring passage
+                sign = (ksi>0)    # True if ksi>0, False if ksi<0
+                signchange = np.array(sign[1:,:],int)-np.array(sign[:-1,:],int)
+
+                write_ksi_select(fn_ksi,mask,dist,ksi,signchange)
+
+        elif todo=="dmin":
+            # DOING DMIN
+            for i in xrange(rg.nring):
+    
+                # collect dmin distances
+                dmin = np.zeros((ntime,5))
+                for frame in xrange(ntime):
+                    ring = Ring(rg.list_indices[i],allcoorframework[frame,:,:],atomtypes,unitcell=unitcell0)
+                    ring.set_dmin()
+                    dmin[frame,1:] = ring.diameters[:]
+                    dmin[frame,0] = ring.dmin
+    
+                dmindir = "./"
+                fn_dmin = "%s/dmin.ring%i.run%i.dat"%(dmindir,i,run)
+                f = file(fn_dmin, "w+")
+                print >> f, "#dmin  dia1 dia2 dia3 dia4"
+                for frame in xrange(ntime):
+                    f.write('%.3f  %.3f %.3f %.3f %.3f\n' % (
+                         dmin[frame,0],dmin[frame,1],dmin[frame,2],dmin[frame,3],dmin[frame,4],))
+                f.close()
 
 
 #            def write_xyz_diffvector(filename,pos,center,unitcell):

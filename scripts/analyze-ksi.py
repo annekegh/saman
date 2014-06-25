@@ -122,7 +122,6 @@ f.close()
 print "file written...",logfile
 print "*"*20
 
-print done
 
 logfile = "%s.%s.transitions.average.dat" % (system,temp)
 write_averagetransitions(logfile,rg)
