@@ -1017,9 +1017,10 @@ def write_averagetransitions(logfile,rg):
 #################################################################################
 
 import matplotlib.pyplot as plt
-colors = ['blue','green','red','black','grey','orange','magenta']
+oldcolors = ['blue','green','red','black','grey','orange','magenta']
+newcolors = ['blue','green','red','magenta','orange','black','grey','brown',]
 
-def plot_Fprofiles(basename,rg,):
+def plot_Fprofiles(basename,rg,recolor=None):
     print "-"*20
     print "#plotting"
     print "#ring  composition transitions netto"
@@ -1027,10 +1028,14 @@ def plot_Fprofiles(basename,rg,):
     plt.figure(1)
     plt.figure(2)
     for i in range(rg.nring):
+        colors = oldcolors
         c = rg.list_compsrings[i]
+        if recolor is not None:   # apply new colors
+            colors = newcolors
+            c = recolor[c]
         label = " ".join(str(a) for a in rg.list_comps[c]) if i==rg.list_rings_percomp[c][0]  else ""
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
-        hist,edges = np.histogram(pas.ksi.ravel(),bins=50)
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50))
         # plot
         plt.figure(1)
         plt.subplot(3,1,1)
@@ -1084,12 +1089,13 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
     for i in range(rg.nring):
         print "ring",i,"neighbors_identical",rg.list_rings[i].neighbors_identical
 
+    colors = ["blue","green"]
     plt.figure()
     for i in range(rg.nring):
         c = rg.list_rings[i].neighbors_identical
         # plot
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
-        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50))
         plt.subplot(2,1,1)
         plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
         plt.subplot(2,1,2)
@@ -1112,23 +1118,28 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
     plt.grid()
     plt.savefig("%s.png"%(basename))
 
-def plot_Fprofiles_perringtype(fignamebase,rg,):
+def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
     print "-"*20
     print "#plotting"
     print "#ring  composition transitions netto"
 
     for c,crings in enumerate(rg.list_rings_percomp):
         print "Doing comp",c,"for rings",crings
+        comp = c
+        colors = oldcolors
+        if recolor is not None:   # apply new colors
+            colors = newcolors
+            comp = recolor[c]
 
         plt.figure()
         for i,ringnb in enumerate(crings):
             # plot
             pas = passing_average(rg.list_rings[ringnb].passing, average="oneheap")
-            hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
+            hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50.))
             plt.subplot(2,1,1)
-            plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c])
+            plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[comp])
             plt.subplot(2,1,2)
-            plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c])
+            plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
             print "ring",ringnb,c,pas.transitions,pas.netto
     
         plt.subplot(2,1,1)
@@ -1157,7 +1168,7 @@ def write_Fprofiles(basename,rg,shift=False):
     print >> f, "#ring Fmax"
     for i in range(rg.nring):
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
-        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4,4.,8./50.))
+        hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50))
         if shift:
             fun = -np.log(hist)-min(-np.log(hist))
         else:

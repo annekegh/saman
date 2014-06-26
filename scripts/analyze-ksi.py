@@ -32,7 +32,9 @@ fn_xyz = "%s/config.xyz" %(somedir,)
 fn_rings = "%s/ringatoms" %(somedir,)
 #fn_rings_atomtypes = "../%s/atomtypes" %(somedir,)
 fn_unitcell = "%s/cellvectors" %(somedir,)
+fn_recolor = "%s/%s.recolor" %(somedir+"/../../recolor/",system)
 
+recolor = np.loadtxt(fn_recolor,dtype=int)
 
 ## set datadir
 #system = "sapo34"
@@ -131,10 +133,10 @@ print "-"*20
 
 #################################################################################
 
-plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
-plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,)
+plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
+plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
 plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
-write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
 
     
 #################################################################################
