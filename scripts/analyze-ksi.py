@@ -133,10 +133,10 @@ print "-"*20
 
 #################################################################################
 
-plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
+#plot_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
 plot_Fprofiles_perringtype("histogram.perringtype1.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
-plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
-write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
+#plot_Fprofiles_ringtypeidentical("identical.histogram.ksi_ma.%s_%s"%(system,temp),rg,)
+#write_Fprofiles("histogram.ksi_ma.%s_%s"%(system,temp),rg,recolor=recolor)
 
     
 #################################################################################

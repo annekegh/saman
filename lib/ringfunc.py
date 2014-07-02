@@ -1131,17 +1131,24 @@ def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
             colors = newcolors
             comp = recolor[c]
 
-        plt.figure()
+        plt.figure(1)
+        plt.figure(2)
         for i,ringnb in enumerate(crings):
             # plot
             pas = passing_average(rg.list_rings[ringnb].passing, average="oneheap")
             hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50.))
+            print "ring",ringnb,c,pas.transitions,pas.netto
+
+            plt.figure(1)
             plt.subplot(2,1,1)
             plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[comp])
             plt.subplot(2,1,2)
             plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
-            print "ring",ringnb,c,pas.transitions,pas.netto
-    
+
+            plt.figure(2)
+            plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
+ 
+        plt.figure(1)
         plt.subplot(2,1,1)
         # assume rg.ingred is set to ingredients, not to None
         plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
@@ -1158,7 +1165,18 @@ def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
         plt.ylim(0,10)
         plt.grid()
         plt.savefig("%s.comp%i.png"%(fignamebase,c))
+        plt.clf(); plt.close()
 
+        plt.figure(2)
+        # assume rg.ingred is set to ingredients, not to None
+        plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
+        plt.xlabel("xi in [A]")
+        plt.ylabel("F(xi) in [kBT]")
+        plt.xlim(-4,4)
+        plt.ylim(0,10)
+        plt.grid()
+        plt.savefig("%s.comp%i.F.png"%(fignamebase,c))
+        plt.clf(); plt.close()
 
 def write_Fprofiles(basename,rg,shift=False):
     print "-"*20
