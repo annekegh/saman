@@ -8,6 +8,33 @@ from math import atan2
 from ring_sasa import ring_sasa
 
 
+def plotsettings():
+    plt.rc(('xtick','ytick','axes'), labelsize=22 ) #26.0)
+    plt.rc(('axes'), labelsize=30 ) #26.0)
+    plt.rcParams['lines.linewidth'] = 1  #3
+    plt.rcParams['axes.linewidth'] = 2
+    plt.rcParams['axes.titlesize'] = 28
+    plt.rcParams['xtick.major.size'] = 12
+    plt.rcParams['xtick.minor.size'] = 4
+    plt.rcParams['ytick.major.size'] = 12
+    plt.rcParams['ytick.minor.size'] = 4
+    plt.rcParams['figure.subplot.left']=0.12  #0.15
+    plt.rcParams['figure.subplot.bottom']=0.13 #0.14
+    plt.rcParams['legend.fontsize'] = 22 #18
+def plotsettingsax(ax):
+    for line in ax.xaxis.get_ticklines() + ax.yaxis.get_ticklines():
+        #line.set_color('green')
+        line.set_markersize(10)
+        line.set_markeredgewidth(2)
+    #ax.xaxis.set_major_locator(matplotlib.ticker.MaxNLocator(6, )) #prune='both'))
+    #ax.yaxis.set_major_locator(matplotlib.ticker.MaxNLocator(6, )) #prune='both'))
+#plotsettings()
+#plotlinestyles = ['-']+['--']*10
+#plotlinecolors = ['black', 'green', 'blue', 'red']
+#plotlinemarkers = [',', 'x','d','s']
+
+
+
 def ringpucker(a1,align=False):
     #see: A General Definition of Ring Puckering Coordinates, Kremer and Pople, JACS 1975
     #a1 is a vector of atom coordinates
@@ -1119,17 +1146,18 @@ def plot_Fprofiles_ringtypeidentical(basename,rg,):
     plt.savefig("%s.png"%(basename))
 
 def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
+    plotsettings()
     print "-"*20
     print "#plotting"
     print "#ring  composition transitions netto"
 
     for c,crings in enumerate(rg.list_rings_percomp):
         print "Doing comp",c,"for rings",crings
-        comp = c
+        comp = c    # c counts the composition
         colors = oldcolors
         if recolor is not None:   # apply new colors
             colors = newcolors
-            comp = recolor[c]
+            comp = recolor[c]  # comp is the composition index
 
         plt.figure(1)
         plt.figure(2)
@@ -1146,7 +1174,14 @@ def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
             plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
 
             plt.figure(2)
-            plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
+            #plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[comp])
+
+            #for i in range(rg.nring):
+            #    print "ring",i,"neighbors_identical",rg.list_rings[i].neighbors_identical
+            if not rg.list_rings[ringnb].neighbors_identical:
+                plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),'-',color=colors[comp])
+            else:
+                plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),'--',color=colors[comp])
  
         plt.figure(1)
         plt.subplot(2,1,1)
@@ -1154,13 +1189,13 @@ def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
         plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
     
         plt.subplot(2,1,1)
-        plt.ylabel("hist(ksi)")
+        plt.ylabel(r'hist($\xi$)')
         plt.xlim(-4,4)
         plt.ylim(0,1000)
         plt.grid()
         plt.subplot(2,1,2)
-        plt.xlabel("ksi in [A]")
-        plt.ylabel("F(ksi) in [kBT]")
+        plt.xlabel(r'$\xi$ [$\AA$]')
+        plt.ylabel(r'$F(\xi)$ [$k_BT$]')
         plt.xlim(-4,4)
         plt.ylim(0,10)
         plt.grid()
@@ -1169,13 +1204,22 @@ def plot_Fprofiles_perringtype(fignamebase,rg,recolor=None):
 
         plt.figure(2)
         # assume rg.ingred is set to ingredients, not to None
-        plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
-        plt.xlabel("xi in [A]")
-        plt.ylabel("F(xi) in [kBT]")
+        #plt.title(" ".join(rg.ingred)+" "+" ".join(str(a) for a in rg.list_comps[c]))
+        # for paper:
+        # titles: newcolor=blue=0, newcolor=red=2, newcolor=black=5
+#oldcolors = ['blue','green','red','black','grey','orange','magenta']
+#newcolors = ['blue','green','red','magenta','orange','black','grey','brown',]
+
+        titles = [r'Al$_4$P$_4$O$_8$', "",r'Al$_4$P$_3$O$_7$Si(OH)',"","",r'Al$_3$P$_2$O$_7$Si$_3$(OH)',]
+        plt.title(titles[comp])    # this probably will break except for sapo18
+        plt.xlabel(r'$\xi$ [$\AA$]')
+        plt.ylabel(r'$F(\xi)$ [$k_BT$]')
         plt.xlim(-4,4)
         plt.ylim(0,10)
         plt.grid()
         plt.savefig("%s.comp%i.F.png"%(fignamebase,c))
+        plt.savefig("%s.comp%i.F.pdf"%(fignamebase,c))
+        plt.savefig("%s.comp%i.F.eps"%(fignamebase,c))
         plt.clf(); plt.close()
 
 def write_Fprofiles(basename,rg,shift=False):
