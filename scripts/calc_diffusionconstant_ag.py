@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     ######################################################################
     do_calctensorD = True
-    do_gethistograms = False
+    do_gethistograms = False #True #False
     do_getksi = False
     ######################################################################
     
@@ -127,11 +127,14 @@ if __name__ == "__main__":
             unitcell_v[:,i,i] = np.linalg.norm(vec)
             projs.append(proj)
 
-        # create variations
-        for (i,j,k) in [[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[-1,1,1]]:
-            vec = unitcellvecs[:,0]*i + unitcellvecs[:,1]*j + unitcellvecs[:,2]*k
-            proj = create_projected(vec,list_x,list_y,list_z)
-            projs.append(proj)
+        import mcdiff
+        from mcdiff.tools.functionsdiffusion import fill_transition_matrix
+
+        ## create variations
+        #for (i,j,k) in [[1,1,0],[1,-1,0],[1,0,1],[1,0,-1],[0,1,1],[0,1,-1],[1,1,1],[1,1,-1],[1,-1,1],[-1,1,1]]:
+        #    vec = unitcellvecs[:,0]*i + unitcellvecs[:,1]*j + unitcellvecs[:,2]*k
+        #    proj = create_projected(vec,list_x,list_y,list_z)
+        #    projs.append(proj)
 
         kwargs = {"ymin":0,"ymax":6}
         for j,proj in enumerate(projs):
@@ -170,23 +173,23 @@ if __name__ == "__main__":
 #        plot_histogram(np.array(c),"%s.projT%i"%(filename_histogram,j),**kwargs)
 
 
-    if False:
-        # create histogram
-        from mcdiff.tools.functionshistogram import plot_histogram
-        filename_histogram = args.filename_histogram
-        kwargs = {"ymin":0,"ymax":6}
-        c = []
-        for i in range(len(list_x)): c.extend(list_x[i].ravel().tolist())
-        plot_histogram(np.array(c),"%s.x"%(filename_histogram),**kwargs)
-        c = []
-        for i in range(len(list_y)): c.extend(list_y[i].ravel().tolist())
-        plot_histogram(np.array(c),"%s.y"%(filename_histogram),**kwargs)
-        c = []
-        for i in range(len(list_z)): c.extend(list_z[i].ravel().tolist())
-        plot_histogram(np.array(c),"%s.z"%(filename_histogram),**kwargs)
-        #plot_histogram(np.array(list_x).ravel(),"%s.x"%(filename_histogram))
-        #plot_histogram(np.array(list_y).ravel(),"%s.y"%(filename_histogram))
-        #plot_histogram(np.array(list_z).ravel(),"%s.z"%(filename_histogram))
+        if False:
+            # create histogram
+            from mcdiff.tools.functionshistogram import plot_histogram
+            filename_histogram = args.filename_histogram
+            kwargs = {"ymin":0,"ymax":6}
+            c = []
+            for i in range(len(list_x)): c.extend(list_x[i].ravel().tolist())
+            plot_histogram(np.array(c),"%s.x"%(filename_histogram),**kwargs)
+            c = []
+            for i in range(len(list_y)): c.extend(list_y[i].ravel().tolist())
+            plot_histogram(np.array(c),"%s.y"%(filename_histogram),**kwargs)
+            c = []
+            for i in range(len(list_z)): c.extend(list_z[i].ravel().tolist())
+            plot_histogram(np.array(c),"%s.z"%(filename_histogram),**kwargs)
+            #plot_histogram(np.array(list_x).ravel(),"%s.x"%(filename_histogram))
+            #plot_histogram(np.array(list_y).ravel(),"%s.y"%(filename_histogram))
+            #plot_histogram(np.array(list_z).ravel(),"%s.z"%(filename_histogram))
 
 
     if do_calctensorD:
