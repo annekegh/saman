@@ -175,7 +175,7 @@ def ellipse_axis_length( a ):
 ####################################
 
 class Ring(object):
-    def __init__(self,indices,pos,atomtypes,unitcell=None,maxradius=6.,orient=None):
+    def __init__(self,indices,pos,atomtypes,unitcell=None,maxradius=6.,orient=None,npt=False):
         self.indices = indices
         self.pos = np.take(pos,indices,0)    # natom-in-ring x 3
         self.atomtypes = np.take(atomtypes,indices)
@@ -724,19 +724,29 @@ def reposition_pbc(pos,unitcell):
         com = np.dot(masses_used,pos_used)/np.sum(masses_used)
     return newpos
 
-def get_centers_planes(allcoorframework,rg,atomtypes,unitcell=None):
-    # create time series of center of rings 
-    # allcoorframework  --  ntime x natom x 3
-    # rg  --  RingGroup instance
-    # atomtypes  --  atomtypes of all frameworkatoms
+def get_centers_planes(allcoorframework,rg,atomtypes,unitcell=None,npt=False):
+    """ create time series of center of rings 
+
+    allcoorframework  --  ntime x natom x 3
+    rg  --  RingGroup instance
+    atomtypes  --  atomtypes of all frameworkatoms
+    unitcell  --  if given, take into account the PBC
+    npt  --  whether unitcell is updated at every frame of the trajectory.
+             If True, unitcell is in format  ntime x 3 x 3.
+             If False, unitcell is in format  3 x 3.
+    """
     ntime = len(allcoorframework)
     centers = np.zeros((ntime,rg.nring,3))
     planes = np.zeros((ntime,rg.nring,3))
     #print "ntime,natom,3 (allcoorframework)",allcoorframework.shape
     #print "ntime,nring,3 (centers)",centers.shape
+    uc = unitcell
+    if npt: assert len(unitcell.shape)==3; len(unitcell)==ntime
     for t in range(ntime):
         for i in range(rg.nring):
-            ring = Ring(rg.list_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=unitcell,orient=rg.list_orient[i])
+            if npt:
+                uc = unitcell[t,:,:]
+            ring = Ring(rg.list_indices[i],allcoorframework[t,:,:],atomtypes,unitcell=uc,orient=rg.list_orient[i])
             centers[t,i,:] = ring.center[:]
             planes[t,i,:] = ring.plane[:]
     return centers,planes
@@ -760,13 +770,27 @@ def get_centers_planes(allcoorframework,rg,atomtypes,unitcell=None):
 #            planes[t,i,:] = ring.plane[:]
 #    return centers,planes
 
-def shortest_vector(delta,unitcell):
+
+def shortest_vector_onetime(delta,unitcell):
+    # delta -- vector (ntime x natom x 3)
+    # unitcell -- array (3 x 3)
     reciprocal = np.linalg.inv(unitcell).T
     direct = np.dot(delta, reciprocal)
     direct_minimage = direct - np.round(direct)    # minimum image
     return np.dot(direct_minimage,unitcell.T)  # change cartesian
     #direct_minimage = np.floor(direct + 0.5)  # fractional
     #return delta - np.dot(direct_minimage, unitcell.T)  # change cartesian
+
+def shortest_vector(delta,unitcell,npt=False):
+    # delta shape ntime x 3
+    if not npt:
+        return shortest_vector_onetime(delta,unitcell)
+    else:
+        res = np.zeros(delta.shape,float)
+        ntime = len(unitcell)
+        for t in range(ntime):
+            res[t,:] = shortest_vector_onetime(delta[t,:],unitcell[t,:,:]) 
+        return res
 
 def check_location(ring,pos,unitcell):
     delta = pos-ring.center
@@ -781,9 +805,11 @@ def check_location(ring,pos,unitcell):
     #print "ksi",ksi.shape
     return dist,ksi,h
 
-def check_location_bis(center,plane,pos,unitcell):
-    delta = pos-center
-    shortest = shortest_vector(delta,unitcell)
+def check_location_bis(center,plane,pos,unitcell,npt=False):
+    # pos -- size ntime x 3
+    # unitcell -- size ntime x 3 x 3 OR size 3 x 3
+    delta = pos-center  # ntime x 3
+    shortest = shortest_vector(delta,unitcell,npt=npt)
     dist2 = np.sum(shortest**2,axis=-1)
     dist = np.sqrt(dist2)
     #ksi = np.dot(shortest,plane)
@@ -1008,9 +1034,14 @@ def create_summarytransitions(datadir,rg,runs=[1]):
             rg.list_rings[i].passing.append(pas)
     # rg will be adapted
 
+def undo_last_summarytransitions(rg,n=1):
+    for i in range(rg.nring):
+        for N in range(n):
+            rg.list_rings[i].passing.pop()
+
 def write_summarytransitions(logfile,rg):
     f = file(logfile,"w+")
-    print >> f,"#ring run composition   transitions netto   transitions-corr netto-corr"
+    print >> f,"#ring composition run   transitions netto   transitions-corr netto-corr"
     for i in range(rg.nring):
         c = rg.list_compsrings[i]
         for run in range(len(rg.list_rings[i].passing)):
@@ -1064,15 +1095,27 @@ def plot_Fprofiles(basename,rg,recolor=None):
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50))
         # plot
+        np.seterr(divide='ignore')
+        #try:
+        #    histlog = np.log(hist)
+        #    shift = min(-histlog)
+        #except FloatingPointError:
+        #    print "FloatingPointError: divide by zero encountered in log HAS HAPPENED"
+        #    print "I HAVE NOT SHIFTED"
+        #    histlog = np.where(hist>0,np.log(hist),Nan)
+        #    shift=0.
+        histlog = np.log(hist)
+        shift = min(-histlog)
+        if np.isnan(shift): shift = 0.
         plt.figure(1)
         plt.subplot(3,1,1)
         plt.plot((edges[1:]+edges[:-1])/2.,hist,color=colors[c],label=label)
         plt.subplot(3,1,2)
-        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c],)
+        plt.plot((edges[1:]+edges[:-1])/2.,-histlog-shift,color=colors[c],)
         plt.subplot(3,1,3)
-        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist),color=colors[c],)
+        plt.plot((edges[1:]+edges[:-1])/2.,-histlog,color=colors[c],)
         plt.figure(2)
-        plt.plot((edges[1:]+edges[:-1])/2.,-np.log(hist)-min(-np.log(hist)),color=colors[c],)
+        plt.plot((edges[1:]+edges[:-1])/2.,-histlog-shift,color=colors[c],)
         print "ring",i,c,pas.transitions,pas.netto
 
     plt.figure(1)
@@ -1231,10 +1274,11 @@ def write_Fprofiles(basename,rg,shift=False):
     for i in range(rg.nring):
         pas = passing_average(rg.list_rings[i].passing, average="oneheap")
         hist,edges = np.histogram(pas.ksi.ravel(),bins=np.arange(-4.,4.1,8./50))
+        histlog = np.log(hist)
         if shift:
-            fun = -np.log(hist)-min(-np.log(hist))
+            fun = -histlog-min(-histlog)
         else:
-            fun = -np.log(hist)
+            fun = -histlog
         filename = basename+".ring.%i.dat" %(i)
         write_histogram(filename,fun,edges)
         print >> f, i,max(fun)
